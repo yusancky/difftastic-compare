@@ -34,8 +34,8 @@ jobs:
         echo "📊 Starting comparison..."
         mkdir -p diff-results
         
-        difft --width 170 --background light --graph-limit 50000000 --display side-by-side before.py after.py > diff-results/raw.txt 2>&1 || true
-        difft --width 170 --background light --graph-limit 50000000 --display side-by-side --color always before.py after.py > diff-results/colored.ansi 2>&1 || true
+        difft --background light --graph-limit 50000000 --display side-by-side before.py after.py > diff-results/raw.txt 2>&1 || true
+        difft --background light --graph-limit 50000000 --display side-by-side --color always before.py after.py > diff-results/colored.ansi 2>&1 || true
         cat diff-results/colored.ansi | ansi2html > diff-results/report.html
         
         echo "✅ Comparison completed"
