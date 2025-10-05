@@ -34,8 +34,8 @@ jobs:
         echo "📊 Starting comparison..."
         mkdir -p diff-results
         
-        DFT_AST_NODE_LIMIT=2000000 difft --language python --width 170 before.py after.py > diff-results/raw.txt 2>&1 || true
-        DFT_AST_NODE_LIMIT=2000000 difft --language python --width 170 --color always before.py after.py > diff-results/colored.ansi 2>&1 || true
+        DFT_AST_NODE_LIMIT=2000000 difft --width 170 before.py after.py > diff-results/raw.txt 2>&1 || true
+        DFT_AST_NODE_LIMIT=2000000 difft --width 170 --color always before.py after.py > diff-results/colored.ansi 2>&1 || true
         cat diff-results/colored.ansi | ansi2html > diff-results/report.html
         
         echo "✅ Comparison completed"
