@@ -1,152 +1,51 @@
-name: Compare Python files with difftastic
-
+name: Difftastic Comparison
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - 'before.py'
+      - 'after.py'
 
 jobs:
-  compare-python-files:
+  compare:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout repository
+    - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Install difftastic 0.65.0
+    - name: Download and setup difftastic
       run: |
+        # 下载 difftastic 0.65.0
         wget https://github.com/Wilfred/difftastic/releases/download/0.65.0/difft-x86_64-unknown-linux-gnu.tar.gz
         tar -xzf difft-x86_64-unknown-linux-gnu.tar.gz
         sudo mv difft /usr/local/bin/
-        rm difft-x86_64-unknown-linux-gnu.tar.gz
+        chmod +x /usr/local/bin/difft
         
-    - name: Install ANSI to HTML converter
+    - name: Run difftastic comparison
       run: |
-        sudo apt-get update
-        sudo apt-get install -y python3-pip
-        pip3 install ansi2html
+        # 设置环境变量强制使用 Python 解析器
+        export DFT_DISABLE_TREE_SITTER=1
         
-    - name: Compare Python files with custom width
-      run: |
-        if [[ ! -f "before.py" ]] || [[ ! -f "after.py" ]]; then
-          echo "❌ Required Python files not found"
+        # 运行 difftastic 比较，设置宽度并输出到 HTML
+        difft \
+          --display width \
+          --width 170 \
+          --background inline \
+          before.py after.py > diff_output.html || true
+        
+        # 检查输出文件是否生成
+        if [ -f diff_output.html ]; then
+          echo "Diff output generated successfully"
+          ls -la diff_output.html
+        else
+          echo "Failed to generate diff output"
           exit 1
         fi
         
-        echo "📊 Comparing Python files with 170 characters width (85 per side)..."
-        
-        mkdir -p diff-results
-        
-        # Generate output with custom width (85 chars per side = 170 total)
-        difft --width 170 --color always before.py after.py > diff-results/colored.ansi 2>&1 || true
-        
-        # Also generate a version with auto-display for comparison
-        difft --color always before.py after.py > diff-results/colored-auto.ansi 2>&1 || true
-        
-        echo "✅ Diff generated with custom width"
-        
-    - name: Generate HTML with wide layout
-      run: |
-        cat > diff-results/report.html << 'EOF'
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Python File Diff - before.py vs after.py</title>
-            <style>
-                :root {
-                    --bg-color: transparent;
-                    --text-color: #24292f;
-                    --border-color: #d0d7de;
-                }
-                
-                @media (prefers-color-scheme: dark) {
-                    :root {
-                        --bg-color: transparent;
-                        --text-color: #e6edf3;
-                        --border-color: #30363d;
-                    }
-                }
-                
-                body {
-                    background: var(--bg-color);
-                    color: var(--text-color);
-                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-                    line-height: 1.5;
-                    margin: 0;
-                    padding: 20px;
-                }
-                
-                .container {
-                    max-width: none;
-                    overflow-x: auto;
-                }
-                
-                .diff-header {
-                    margin-bottom: 16px;
-                }
-                
-                pre {
-                    margin: 0;
-                    padding: 16px;
-                    overflow-x: auto;
-                    font-family: "SFMono-Regular", "Consolas", "Liberation Mono", monospace;
-                    font-size: 12px;
-                    line-height: 1.45;
-                    white-space: pre-wrap;
-                    word-wrap: break-word;
-                }
-                
-                /* Ensure wide content doesn't get truncated */
-                .ansi2html-content {
-                    min-width: 100%;
-                    width: max-content;
-                }
-                
-                /* ANSI color overrides */
-                .ansi-black-fg { color: #1b1f23; }
-                .ansi-red-fg { color: #cf222e; }
-                .ansi-green-fg { color: #116329; }
-                .ansi-yellow-fg { color: #633c01; }
-                .ansi-blue-fg { color: #0969da; }
-                .ansi-magenta-fg { color: #8250df; }
-                .ansi-cyan-fg { color: #1b7c83; }
-                .ansi-white-fg { color: #6e7781; }
-                
-                @media (prefers-color-scheme: dark) {
-                    .ansi-black-fg { color: #7d8590; }
-                    .ansi-red-fg { color: #ff7b72; }
-                    .ansi-green-fg { color: #3fb950; }
-                    .ansi-yellow-fg { color: #d29922; }
-                    .ansi-blue-fg { color: #58a6ff; }
-                    .ansi-magenta-fg { color: #bc8cff; }
-                    .ansi-cyan-fg { color: #76e3ea; }
-                    .ansi-white-fg { color: #ffffff; }
-                }
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="diff-header">
-                    <h1>Python File Comparison</h1>
-                    <p>Comparing <code>before.py</code> vs <code>after.py</code> with 85 characters width per side</p>
-                </div>
-        EOF
-        
-        # Convert ANSI to HTML and append to the file
-        cat diff-results/colored.ansi | ansi2html --inline >> diff-results/report.html
-        
-        # Close the HTML
-        cat >> diff-results/report.html << 'EOF'
-            </div>
-        </body>
-        </html>
-        EOF
-        
-        echo "✅ Wide HTML report generated"
-        
-    - name: Upload comparison results
+    - name: Upload diff result
       uses: actions/upload-artifact@v4
       with:
-        name: python-diff-reports
-        path: diff-results/
+        name: difftastic-comparison
+        path: diff_output.html
         retention-days: 30
