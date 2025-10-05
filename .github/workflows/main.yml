@@ -1,10 +1,7 @@
-name: Difftastic Comparison
+name: Difftastic HTML Comparison
 on:
   workflow_dispatch:
   push:
-    paths:
-      - 'before.py'
-      - 'after.py'
 
 jobs:
   compare:
@@ -17,35 +14,28 @@ jobs:
     - name: Download and setup difftastic
       run: |
         # 下载 difftastic 0.65.0
-        wget https://github.com/Wilfred/difftastic/releases/download/0.65.0/difft-x86_64-unknown-linux-gnu.tar.gz
+        wget -q https://github.com/Wilfred/difftastic/releases/download/0.65.0/difft-x86_64-unknown-linux-gnu.tar.gz
         tar -xzf difft-x86_64-unknown-linux-gnu.tar.gz
         sudo mv difft /usr/local/bin/
         chmod +x /usr/local/bin/difft
         
-    - name: Run difftastic comparison
+    - name: Run difftastic comparison with HTML output
       run: |
         # 设置环境变量强制使用 Python 解析器
         export DFT_DISABLE_TREE_SITTER=1
         
-        # 运行 difftastic 比较，设置宽度并输出到 HTML
-        difft \
-          --display width \
-          --width 170 \
-          --background inline \
-          before.py after.py > diff_output.html || true
+        # 使用 script 命令模拟 TTY 以确保 HTML 输出正常
+        script -q -c "difft --display side-by-side --width 170 --background inline before.py after.py" /dev/null > diff_output.html || true
         
-        # 检查输出文件是否生成
-        if [ -f diff_output.html ]; then
-          echo "Diff output generated successfully"
-          ls -la diff_output.html
-        else
-          echo "Failed to generate diff output"
-          exit 1
-        fi
+        # 检查输出文件内容和大小
+        echo "Generated file size:"
+        ls -la diff_output.html
+        echo "First 100 characters of output:"
+        head -c 100 diff_output.html || echo "File is empty"
         
     - name: Upload diff result
       uses: actions/upload-artifact@v4
       with:
-        name: difftastic-comparison
+        name: difftastic-html-comparison
         path: diff_output.html
         retention-days: 30
