@@ -1,6 +1,7 @@
 name: Diff Comparison
 
 on:
+  push:
   workflow_dispatch:
 
 jobs:
@@ -32,9 +33,13 @@ jobs:
 
         echo "📊 Starting comparison..."
         mkdir -p diff-results
-        difft before.py after.py > diff-results/raw.txt 2>&1 || true
-        difft --color always before.py after.py > diff-results/colored.ansi 2>&1 || true
+        
+        # 强制使用 Python 语法比较，设置宽度为 170
+        difft --language python --width 170 before.py after.py > diff-results/raw.txt 2>&1 || true
+        difft --language python --width 170 --color always before.py after.py > diff-results/colored.ansi 2>&1 || true
         cat diff-results/colored.ansi | ansi2html > diff-results/report.html
+        
+        echo "✅ Comparison completed with Python syntax and width 170"
     - name: Upload comparison results
       uses: actions/upload-artifact@v4
       if: always()
