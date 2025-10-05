@@ -1,0 +1,44 @@
+name: Diff Comparison
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diff-comparison:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v5
+    - name: Install difftastic 0.65.0
+      run: |
+        wget https://github.com/Wilfred/difftastic/releases/download/0.65.0/difft-x86_64-unknown-linux-gnu.tar.gz
+        tar -xzf difft-x86_64-unknown-linux-gnu.tar.gz
+        sudo mv difft /usr/local/bin/
+        rm difft-x86_64-unknown-linux-gnu.tar.gz
+    - run: difft --version
+    - name: Install ANSI to HTML converter
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y python3-pip
+        pip3 install ansi2html
+    - name: Compare files and generate reports
+      run: |
+        # Check if files exist
+        if [[ ! -f "before.py" ]] || [[ ! -f "after.py" ]]; then
+          echo "❌ Required files not found"
+          ls -la *.py || echo "No Python files found"
+          exit 1
+        fi
+
+        echo "📊 Starting comparison..."
+        mkdir -p diff-results
+        difft before.py after.py > diff-results/raw.txt 2>&1 || true
+        difft --color always before.py after.py > diff-results/colored.ansi 2>&1 || true
+        cat diff-results/colored.ansi | ansi2html > diff-results/report.html
+    - name: Upload comparison results
+      uses: actions/upload-artifact@v5
+      if: always()
+      with:
+        name: file-comparison-reports
+        path: diff-results/
+        retention-days: 30
